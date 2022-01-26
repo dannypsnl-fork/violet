@@ -73,16 +73,16 @@
   (parser [start sexpr-list]
           [end EOF]
           [error (lambda (tok-ok? tok-name tok-value start-pos end-pos)
-                   (printf "tok-ok?: ~a, token: ~a ~a, position: ~a ~a\n"
-                           tok-ok? tok-name tok-value start-pos end-pos))]
+                   (printf "~a-~a: tok-ok?: ~a, token: ~a ~a\n"
+                           (make-pos start-pos) (make-pos end-pos)
+                           tok-ok? tok-name tok-value))]
           [src-pos]
           [tokens symbol datum end]
           [grammar
            (sexpr [(NUM) (make-v:num $1 $1-start-pos $1-end-pos)]
                   [(ID) (make-v:id $1 $1-start-pos $1-end-pos)]
                   [(STR) (make-v:str $1 $1-start-pos $1-end-pos)]
-                  [(|(| sexpr-list |)|)
-                   $2]
+                  [(|(| sexpr-list |)|) $2]
                   [(|'| sexpr) (make-v:quote $2 $1-start-pos $1-end-pos)])
            (sexpr-list [(sexpr) (list $1)]
                        [(sexpr sexpr-list) (cons $1 $2)])]))
@@ -122,8 +122,9 @@
     [(list (? v:id?) rest ...)
      #:when (equal? (v:id-id (first f))
                     'define)
-     (error 'bad-form "~a invalid `define` form"
-            (v:form-start (first f)))]
+     (error 'bad-form "~a-~a: invalid `define` form"
+            (v:form-start (first f))
+            (v:form-end (first f)))]
     [else f]))
 
 (module+ test

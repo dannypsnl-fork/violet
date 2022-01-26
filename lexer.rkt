@@ -2,8 +2,7 @@
 (provide (all-defined-out))
 
 (require parser-tools/lex
-         (prefix-in : parser-tools/lex-sre)
-         racket/stream)
+         (prefix-in : parser-tools/lex-sre))
 
 (define-empty-tokens symbol
   (|(|
