@@ -1,14 +1,58 @@
 #lang racket/base
 (provide parse-file)
 
-(require parser-tools/yacc
+(require (only-in parser-tools/lex
+                  position-line
+                  position-col)
+         parser-tools/yacc
          "lexer.rkt")
 
+(struct pos (line column)
+  #:property prop:custom-write
+  (λ (v port mode)
+    (fprintf port "~v:~v"
+             (pos-line v) (pos-column v)))
+  #:transparent)
+(define (make-pos tok-p)
+  (pos (position-line tok-p) (position-col tok-p)))
+
 (struct v:form (start end) #:transparent)
+
 (struct v:num v:form (num)
+  #:property prop:custom-write
+  (λ (v port mode)
+    (fprintf port "~a" (v:num-num v)))
   #:transparent)
+(define (make-v:num str start end)
+  (v:num (make-pos start) (make-pos end)
+         (string->number str)))
+
+(struct v:id v:form (id)
+  #:property prop:custom-write
+  (λ (v port mode)
+    (fprintf port "~a" (v:id-id v)))
+  #:transparent)
+(define (make-v:id str start end)
+  (v:id (make-pos start) (make-pos end)
+        (string->symbol str)))
+
+(struct v:str v:form (str)
+  #:property prop:custom-write
+  (λ (v port mode)
+    (fprintf port "~a" (v:str-str v)))
+  #:transparent)
+(define (make-v:str str start end)
+  (v:str (make-pos start) (make-pos end)
+         str))
+
 (struct v:quote v:form (exp)
+  #:property prop:custom-write
+  (λ (v port mode)
+    (fprintf port "(quote ~a)" (v:quote-exp v)))
   #:transparent)
+(define (make-v:quote l start end)
+  (v:quote (make-pos start) (make-pos end)
+           l))
 
 (define p
   (parser [start sexpr-list]
@@ -19,14 +63,12 @@
           [src-pos]
           [tokens symbol datum end]
           [grammar
-           (sexpr [(NUM) (v:num $1-start-pos $1-end-pos
-                                (string->number $1))]
-                  [(ID) $1]
-                  [(STR) $1]
+           (sexpr [(NUM) (make-v:num $1 $1-start-pos $1-end-pos)]
+                  [(ID) (make-v:id $1 $1-start-pos $1-end-pos)]
+                  [(STR) (make-v:str $1 $1-start-pos $1-end-pos)]
                   [(|(| sexpr-list |)|)
                    $2]
-                  [(|'| sexpr) (v:quote $1-start-pos $1-end-pos
-                                        $2)])
+                  [(|'| sexpr) (make-v:quote $2 $1-start-pos $1-end-pos)])
            (sexpr-list [(sexpr) (list $1)]
                        [(sexpr sexpr-list) (cons $1 $2)])]))
 
