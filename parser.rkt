@@ -5,7 +5,9 @@
 (define-empty-tokens symbol
   (|(|
    |)|
-   |'|))
+   |'|
+   |,|
+   |,@|))
 (define-tokens datum
   (ID
    STR
@@ -18,6 +20,8 @@
    ["(" (token-|(|)]
    [")" (token-|)|)]
    ["'" (token-|'|)]
+   ["," (token-|,|)]
+   [",@" (token-|,@|)]
    [(:+ alphabetic)
     (token-ID lexeme)]
    [(:seq "\"" (:* (:~ #\")) "\"")
