@@ -55,6 +55,15 @@
 (define (make-v:quote l start end)
   (v:quote (make-pos start) (make-pos end) l))
 
+(struct v:list v:form (lst)
+  #:property prop:custom-write
+  (λ (v port mode)
+    (fprintf port "~a" (v:list-lst v)))
+  #:transparent)
+(define (make-v:list start end lst)
+  (v:list (make-pos start) (make-pos end)
+          lst))
+
 (struct v:defvar v:form (id exp)
   #:property prop:custom-write
   (λ (v port mode)
@@ -82,7 +91,7 @@
            (sexpr [(NUM) (make-v:num $1 $1-start-pos $1-end-pos)]
                   [(ID) (make-v:id $1 $1-start-pos $1-end-pos)]
                   [(STR) (make-v:str $1 $1-start-pos $1-end-pos)]
-                  [(|(| sexpr-list |)|) $2]
+                  [(|(| sexpr-list |)|) (make-v:list $1-start-pos $3-end-pos $2)]
                   [(|'| sexpr) (make-v:quote $2 $1-start-pos $1-end-pos)])
            (sexpr-list [(sexpr) (list $1)]
                        [(sexpr sexpr-list) (cons $1 $2)])]))
@@ -102,29 +111,30 @@
     [(? v:str?) f]
     [(? v:id?) f]
     [(? v:quote?) f]
-    [(list (? v:id?) (? v:id?) e)
-     #:when (equal? (v:id-id (first f))
+    [(v:list start end (list (? v:id?) ; define
+                             (? v:id?) ; var
+                             exp))
+     #:when (equal? (v:id-id (first (v:list-lst f)))
                     'define)
-     (define start (v:form-start (first f)))
-     (define end (v:form-start (first f)))
      (v:defvar start end
-               (second f) e)]
-    [(list (? v:id?) (list (? v:id?) ...) body ...)
-     #:when (equal? (v:id-id (first f))
+               (second (v:list-lst f))
+               exp)]
+    [(v:list start end (list (? v:id?) ; define
+                             (v:list _ _ (list (? v:id?) ...)) ; name+params
+                             body ...))
+     #:when (equal? (v:id-id (first (v:list-lst f)))
                     'define)
-     (define start (v:form-start (first (second f))))
-     (define end (v:form-start (first (second f))))
      (v:defvar start end
-               (first (second f))
-               (v:lambda start end
-                         (rest (second f))
+               (first (v:list-lst (second (v:list-lst f)))) ; name
+               (v:lambda (v:form-start (first (v:list-lst f))) end
+                         (rest (v:list-lst (second (v:list-lst f)))) ; params
                          body))]
-    [(list (? v:id?) rest ...)
-     #:when (equal? (v:id-id (first f))
+    [(v:list start end (list (? v:id?) rest ...))
+     #:when (equal? (v:id-id (first (v:list-lst f)))
                     'define)
-     (error 'bad-form "~a-~a: invalid `define` form"
-            (v:form-start (first f))
-            (v:form-end (first f)))]
+     (printf "~a-~a: invalid `define` form\n  ~a\n"
+             start end
+             f)]
     [else f]))
 
 (module+ test
