@@ -1,48 +1,33 @@
 #lang racket/base
-(require parser-tools/lex
-         (prefix-in : parser-tools/lex-sre))
+(require "lexer.rkt")
 
-(define-empty-tokens symbol
-  (|(|
-   |)|
-   |'|
-   |,|
-   |,@|))
-(define-tokens datum
-  (ID
-   STR
-   NUM))
-(define-empty-tokens end (EOF))
+(define (parse-sexpr next)
+  (define tok (next))
+  (case (token-type tok)
+    [(|(|)
+     (take-till '|)| next)])
+  )
 
-(define l
-  (lexer-src-pos
-   [(eof) (token-EOF)]
-   ["(" (token-|(|)]
-   [")" (token-|)|)]
-   ["'" (token-|'|)]
-   ["," (token-|,|)]
-   [",@" (token-|,@|)]
-   [(:+ alphabetic)
-    (token-ID lexeme)]
-   [(:seq "\"" (:* (:~ #\")) "\"")
-    (token-STR lexeme)]
-   [(:+ numeric)
-    (token-NUM lexeme)]
-   [whitespace (return-without-pos (l input-port))]))
-
-(define (tokenize input-port)
-  (lambda ()
-    (l input-port)))
+(define (take-till tok-type next)
+  (let loop ([r (list)]
+             [tok (next)])
+    (cond
+      [(not (equal? tok-type (token-type tok)))
+       (loop (append r (list tok))
+             (next))]
+      [(equal? '|(| (token-type tok))
+       (loop (append r (list (parse-sexpr)))
+             (next))]
+      [else r])))
 
 (module+ test
   (require rackunit)
 
   (define (port->tokenlist input-port)
-    (port-count-lines! input-port)
     (define next (tokenize input-port))
     (let loop ([token (next)]
                [tokenlist (list)])
-      (case (token-name (position-token-token token))
+      (case (token-type token)
         [(EOF) tokenlist]
         [else (loop (next)
                     (append tokenlist (list token)))])))
@@ -52,5 +37,8 @@
 
   (check-equal? (length (string->tokenlist "'(1 2 3)"))
                 6)
+
+  (define next (tokenize (open-input-string "(1 2 3)")))
+  (parse-sexpr next)
 
   )
