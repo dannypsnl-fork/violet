@@ -35,3 +35,5 @@
 
 (define (token-type t)
   (token-name (position-token-token t)))
+(define (token-value t)
+  (token-value (position-token-token t)))

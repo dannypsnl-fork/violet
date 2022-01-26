@@ -4,7 +4,10 @@
 (require parser-tools/yacc
          "lexer.rkt")
 
-(struct v:num (num)
+(struct v:form (start end) #:transparent)
+(struct v:num v:form (num)
+  #:transparent)
+(struct v:quote v:form (exp)
   #:transparent)
 
 (define p
@@ -16,12 +19,14 @@
           [src-pos]
           [tokens symbol datum end]
           [grammar
-           (sexpr [(NUM) $1]
+           (sexpr [(NUM) (v:num $1-start-pos $1-end-pos
+                                (string->number $1))]
                   [(ID) $1]
                   [(STR) $1]
                   [(|(| sexpr-list |)|)
                    $2]
-                  [(|'| sexpr) (cons 'quote $2)])
+                  [(|'| sexpr) (v:quote $1-start-pos $1-end-pos
+                                        $2)])
            (sexpr-list [(sexpr) (list $1)]
                        [(sexpr sexpr-list) (cons $1 $2)])]))
 
