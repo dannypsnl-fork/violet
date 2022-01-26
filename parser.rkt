@@ -5,6 +5,8 @@
                   position-line
                   position-col)
          parser-tools/yacc
+         racket/match
+         racket/list
          "lexer.rkt")
 
 (struct pos (line column)
@@ -51,8 +53,21 @@
     (fprintf port "(quote ~a)" (v:quote-exp v)))
   #:transparent)
 (define (make-v:quote l start end)
-  (v:quote (make-pos start) (make-pos end)
-           l))
+  (v:quote (make-pos start) (make-pos end) l))
+
+(struct v:defvar v:form (id exp)
+  #:property prop:custom-write
+  (λ (v port mode)
+    (fprintf port "(define ~a ~a)" (v:defvar-id v)
+             (v:defvar-exp v)))
+  #:transparent)
+(struct v:lambda v:form (params body)
+  #:property prop:custom-write
+  (λ (v port mode)
+    (fprintf port "(lambda ~a ~a)"
+             (v:lambda-params v)
+             (v:lambda-body v)))
+  #:transparent)
 
 (define p
   (parser [start sexpr-list]
@@ -77,7 +92,39 @@
   (lambda () (lexer input-port)))
 
 (define (parse-file file-port)
-  (p (lex-this l file-port)))
+  (define origin-forms (p (lex-this l file-port)))
+  (for/list ([f origin-forms])
+    (transform-builtin f)))
+
+(define (transform-builtin f)
+  (match f
+    [(? v:num?) f]
+    [(? v:str?) f]
+    [(? v:id?) f]
+    [(? v:quote?) f]
+    [(list (? v:id?) (? v:id?) e)
+     #:when (equal? (v:id-id (first f))
+                    'define)
+     (define start (v:form-start (first f)))
+     (define end (v:form-start (first f)))
+     (v:defvar start end
+               (second f) e)]
+    [(list (? v:id?) (list (? v:id?) ...) body ...)
+     #:when (equal? (v:id-id (first f))
+                    'define)
+     (define start (v:form-start (first (second f))))
+     (define end (v:form-start (first (second f))))
+     (v:defvar start end
+               (first (second f))
+               (v:lambda start end
+                         (rest (second f))
+                         body))]
+    [(list (? v:id?) rest ...)
+     #:when (equal? (v:id-id (first f))
+                    'define)
+     (error 'bad-form "~a invalid `define` form"
+            (v:form-start (first f)))]
+    [else f]))
 
 (module+ test
   (define (parse str)
