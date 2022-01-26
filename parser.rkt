@@ -1,4 +1,6 @@
 #lang racket/base
+(provide parse-file)
+
 (require parser-tools/yacc
          "lexer.rkt")
 
@@ -23,10 +25,14 @@
            (sexpr-list [(sexpr) (list $1)]
                        [(sexpr sexpr-list) (cons $1 $2)])]))
 
+(define (lex-this lexer input-port)
+  (port-count-lines! input-port)
+  (lambda () (lexer input-port)))
+
+(define (parse-file file-port)
+  (p (lex-this l file-port)))
+
 (module+ test
-  (define (lex-this lexer input-port)
-    (port-count-lines! input-port)
-    (lambda () (lexer input-port)))
   (define (parse str)
     (p (lex-this l (open-input-string str))))
 
