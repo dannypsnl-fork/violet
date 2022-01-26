@@ -27,8 +27,8 @@
    [whitespace (return-without-pos (l input-port))]))
 
 (define target "test.ss")
-(parameterize ([file-path target]
-               [current-input-port (open-input-file target)])
+(parameterize ([current-input-port (open-input-file target)])
+  (port-count-lines! (current-input-port))
   (define (next) (l (current-input-port)))
 
   (let loop ([token (next)])
