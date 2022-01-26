@@ -1,7 +1,8 @@
 #lang racket/base
 (require racket/match
          racket/function
-         "parser.rkt")
+         "parser.rkt"
+         "compiler.rkt")
 
 (module+ main
   (require racket/cmdline)
@@ -13,10 +14,12 @@
 
 (define (cli args)
   (match args
-    [(list "parse" filename)
-     (parse-file (open-input-file filename))]
     [(list "--help") (help)]
     [(list "--version") (version)]
+    [(list "parse" filename)
+     (parse-file (open-input-file filename))]
+    [(list filename)
+     (compile-file (parse-file (open-input-file filename)))]
     [_ (help)]))
 
 (define help

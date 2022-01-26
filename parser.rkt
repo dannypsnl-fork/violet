@@ -1,5 +1,13 @@
 #lang racket/base
-(provide parse-file)
+(provide parse-file
+         v:form
+         v:num
+         v:id
+         v:str
+         v:quote
+         v:list
+         v:defvar
+         v:lambda)
 
 (require (only-in parser-tools/lex
                   position-line
