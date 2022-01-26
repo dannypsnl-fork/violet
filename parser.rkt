@@ -26,14 +26,27 @@
     (token-NUM lexeme)]
    [whitespace (return-without-pos (l input-port))]))
 
-(define target "test.ss")
-(parameterize ([current-input-port (open-input-file target)])
-  (port-count-lines! (current-input-port))
-  (define (next) (l (current-input-port)))
+(define (tokenize input-port)
+  (lambda ()
+    (l input-port)))
 
-  (let loop ([token (next)])
-    (case (token-name (position-token-token token))
-      [(EOF) (void)]
-      [else (println token)
-            (loop (next))]))
+(module+ test
+  (require rackunit)
+
+  (define (port->tokenlist input-port)
+    (port-count-lines! input-port)
+    (define next (tokenize input-port))
+    (let loop ([token (next)]
+               [tokenlist (list)])
+      (case (token-name (position-token-token token))
+        [(EOF) tokenlist]
+        [else (loop (next)
+                    (append tokenlist (list token)))])))
+
+  (define (string->tokenlist string)
+    (port->tokenlist (open-input-string string)))
+
+  (check-equal? (length (string->tokenlist "'(1 2 3)"))
+                6)
+
   )
