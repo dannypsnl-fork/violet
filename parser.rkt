@@ -1,35 +1,39 @@
 #lang racket/base
-(require (rename-in "lexer.rkt"
-                    [peek-token peek]
-                    [next-token next]))
+(require parser-tools/yacc
+         "lexer.rkt")
 
-(define (parse-sexpr s)
-  (define tok (next s))
-  (case (token-type tok)
-    [(|(|)
-     (take-till '|)| s)])
-  )
+(struct v:num (num)
+  #:transparent)
 
-(define (take-till tok-type s)
-  (let loop ([r (list)]
-             [tok (next s)])
-    (cond
-      [(not (equal? tok-type (token-type tok)))
-       (loop (append r (list tok))
-             (next s))]
-      [(equal? '|(| (token-type tok))
-       (loop (append r (list (parse-sexpr s)))
-             (next s))]
-      [else r])))
+(define p
+  (parser [start sexpr-list]
+          [end EOF]
+          [error (lambda (tok-ok? tok-name tok-value start-pos end-pos)
+                   (printf "tok-ok?: ~a, token: ~a ~a, position: ~a ~a\n"
+                           tok-ok? tok-name tok-value start-pos end-pos))]
+          [src-pos]
+          [tokens symbol datum end]
+          [grammar
+           (sexpr [(NUM) $1]
+                  [(ID) $1]
+                  [(STR) $1]
+                  [(|(| sexpr-list |)|)
+                   $2]
+                  [(|'| sexpr) (cons 'quote $2)])
+           (sexpr-list [(sexpr) (list $1)]
+                       [(sexpr sexpr-list) (cons $1 $2)])]))
 
 (module+ test
-  (require rackunit)
+  (define (lex-this lexer input-port)
+    (port-count-lines! input-port)
+    (lambda () (lexer input-port)))
+  (define (parse str)
+    (p (lex-this l (open-input-string str))))
 
-  (define s (lex (open-input-string "(1 2 3)")))
-  (check-equal? (length (parse-sexpr s))
-                3)
-
-  (set! s (lex (open-input-string "(1 2 3)")))
-  (parse-sexpr s)
+  (parse "(1 2 3)")
+  (parse "(1 (2 3 4) 5 6 7)")
+  (parse "'(1 2 3)")
+  (parse "'1")
+  (parse "(println \"hello\")")
 
   )
