@@ -120,13 +120,11 @@
     [(? v:id?) f]
     [(? v:quote?) f]
     [(v:list start end (list (? v:id?) ; define
-                             (? v:id?) ; var
+                             (v:id _ _ name) ; var
                              exp))
      #:when (equal? (v:id-id (first (v:list-lst f)))
                     'define)
-     (v:defvar start end
-               (second (v:list-lst f))
-               exp)]
+     (v:defvar start end name exp)]
     [(v:list start end (list (? v:id?) ; define
                              (v:list _ _ (list (? v:id?) ...)) ; name+params
                              body ...))
