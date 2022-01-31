@@ -4,6 +4,8 @@
 (require parser-tools/lex
          (prefix-in : parser-tools/lex-sre))
 
+(define-empty-tokens keyword
+  (:define))
 (define-empty-tokens symbol
   (|(|
    |)|
@@ -24,7 +26,11 @@
    ["'" (token-|'|)]
    ["," (token-|,|)]
    [",@" (token-|,@|)]
-   [(:+ alphabetic)
+   ["define" (token-:define)]
+   [(:: (:or (char-set "+-.*/<=>!?:$%_&~^") alphabetic)
+        (:* (:or (char-set "+-.*/<=>!?:$%_&~^")
+                 numeric
+                 alphabetic)))
     (token-ID lexeme)]
    [(:seq "\"" (:* (:~ #\")) "\"")
     (token-STR lexeme)]
