@@ -1,12 +1,12 @@
 #lang racket/base
-(provide form
-         num
-         id
-         str
-         quote
-         list
-         defvar
-         lambda)
+(provide (struct-out form)
+         (struct-out num)
+         (struct-out id)
+         (struct-out str)
+         (struct-out quote)
+         (struct-out list)
+         (struct-out defvar)
+         (struct-out lambda))
 
 (struct form (start end) #:transparent)
 

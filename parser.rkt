@@ -34,14 +34,16 @@
     f))
 
 (module+ test
+  (require rackunit)
+
   (define (parse str)
-    (p (lex-this l (open-input-string str))))
+    (car (p (lex-this l (open-input-string str)))))
 
-  (parse "(1 2 3)")
-  (parse "(1 (2 3 4) 5 6 7)")
-  (parse "'(1 2 3)")
-  (parse "'1")
-  (parse "(println \"hello\")")
-  (parse "(define foo (+ 1 2 3))")
-
+  (check-pred v:list?  (parse "(1 2 3)"))
+  (check-pred v:list? (parse "(1 (2 3 4) 5 6 7)"))
+  (check-pred v:quote? (parse "'(1 2 3)"))
+  (check-pred v:quote? (parse "'1"))
+  (check-pred v:num? (parse "1"))
+  (check-pred v:list? (parse "(println \"hello\")"))
+  (check-pred v:defvar? (parse "(define foo (+ 1 2 3))"))
   )
