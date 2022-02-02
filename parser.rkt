@@ -18,10 +18,19 @@
            (sexpr [(NUM) (v:num $1-start-pos $1-end-pos $1)]
                   [(ID) (v:id $1-start-pos $1-end-pos $1)]
                   [(STR) (v:str $1-start-pos $1-end-pos $1)]
+                  [(|(| :define |(| ID id-list |)| sexpr |)|)
+                   (v:defvar $1-start-pos $8-end-pos
+                             $4
+                             (v:lambda $5-start-pos $8-end-pos
+                                       $5 $7))]
                   [(|(| :define ID sexpr |)|) (v:defvar $1-start-pos $5-end-pos $3 $4)]
                   [(|(| sexpr-list |)|) (v:list $1-start-pos $3-end-pos $2)]
                   [(|'| sexpr) (v:quote $1-start-pos $1-end-pos $2 )])
-           (sexpr-list [(sexpr) (list $1)]
+           (id-list [() '()]
+                    [(ID) (list $1)]
+                    [(ID id-list) (cons $1 $2)])
+           (sexpr-list [() '()]
+                       [(sexpr) (list $1)]
                        [(sexpr sexpr-list) (cons $1 $2)])]))
 
 (define (lex-this lexer input-port)

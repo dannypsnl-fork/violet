@@ -2,7 +2,7 @@
 (provide compile-file)
 
 (require racket/match
-         "parser.rkt")
+         "ast.rkt")
 
 (define (compile-file forms)
   (displayln "const std = @import(\"std\");
@@ -15,7 +15,8 @@
 
 (define (compile form)
   (match form
-    [(v:defvar start end id exp)
+    [(struct* defvar ([id id]
+                      [exp exp]))
      (printf "const ~a = ~a;\n"
              id
              (compile-expr exp))]
@@ -23,7 +24,7 @@
 
 (define (compile-expr form)
   (match form
-    [(v:num _ _ v) (format "~a" v)]
-    [(v:str _ _ s) (format "~v" s)]
-    [(v:id _ _ id) (format "~a" id)]
-    [else (error 'unsupported-expr "~a" form)]))
+    [(struct* num ([num v])) (format "~a" v)]
+    [(struct* str ([str s])) (format "~v" s)]
+    [(struct* id ([id id])) (format "~a" id)]
+    [else (printf "~a" form)]))

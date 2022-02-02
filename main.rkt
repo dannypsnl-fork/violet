@@ -23,6 +23,10 @@
     [_ (help)]))
 
 (define help
-  (thunk (displayln "violet -- a command-line tool for Racket")))
+  (thunk (displayln "violet -- a command-line tool for Racket
+  parse <file> -- parse and show ast of file
+  <file> -- compile and run file
+  --help
+  --version")))
 (define version
   (thunk (displayln "v0.0.1")))
