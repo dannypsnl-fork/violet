@@ -1,5 +1,6 @@
 #lang racket/base
-(provide parse-expr)
+(provide parse-file
+         parse-expr)
 
 (require "lexer.rkt"
          parser-tools/lex
@@ -38,9 +39,18 @@
         quote/p
         form/p))
 
+(define top/p
+  (do [e* <- (many/p expr/p)]
+    (pure e*)))
+
 (define (parse-expr input-port)
   (parse-result!
    (parse-tokens expr/p
+                 (lex-violet input-port))))
+
+(define (parse-file input-port)
+  (parse-result!
+   (parse-tokens top/p
                  (lex-violet input-port))))
 
 (module+ test
