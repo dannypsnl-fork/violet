@@ -1,58 +1,67 @@
 #lang racket/base
-(provide parse-file)
+(provide parse-expr)
 
-(require parser-tools/yacc
-         "lexer.rkt"
-         (prefix-in v: "ast.rkt"))
+(require "lexer.rkt"
+         parser-tools/lex
+         megaparsack
+         megaparsack/text
+         megaparsack/parser-tools/lex
+         data/applicative
+         data/monad)
 
-(define p
-  (parser [start sexpr-list]
-          [end EOF]
-          [error (lambda (tok-ok? tok-name tok-value start-pos end-pos)
-                   (printf "~a-~a: tok-ok?: ~a, token: ~a ~a\n"
-                           start-pos end-pos
-                           tok-ok? tok-name tok-value))]
-          [src-pos]
-          [tokens keyword symbol datum end]
-          [grammar
-           (sexpr [(NUM) (v:num $1-start-pos $1-end-pos $1)]
-                  [(ID) (v:id $1-start-pos $1-end-pos $1)]
-                  [(STR) (v:str $1-start-pos $1-end-pos $1)]
-                  [(|(| :define |(| ID id-list |)| sexpr |)|)
-                   (v:defvar $1-start-pos $8-end-pos
-                             $4
-                             (v:lambda $5-start-pos $8-end-pos
-                                       $5 $7))]
-                  [(|(| :define ID sexpr |)|) (v:defvar $1-start-pos $5-end-pos $3 $4)]
-                  [(|(| sexpr-list |)|) (v:list $1-start-pos $3-end-pos $2)]
-                  [(|'| sexpr) (v:quote $1-start-pos $1-end-pos $2 )])
-           (id-list [() '()]
-                    [(ID) (list $1)]
-                    [(ID id-list) (cons $1 $2)])
-           (sexpr-list [() '()]
-                       [(sexpr) (list $1)]
-                       [(sexpr sexpr-list) (cons $1 $2)])]))
-
-(define (lex-this lexer input-port)
+(define (lex-violet input-port)
   (port-count-lines! input-port)
-  (lambda () (lexer input-port)))
+  (let loop ([v (violet-lexer input-port)])
+    (cond
+      [(void? (position-token-token v)) (loop (violet-lexer input-port))]
+      [(eof-object? (position-token-token v)) '()]
+      [else (cons v (loop (violet-lexer input-port)))])))
 
-(define (parse-file file-port)
-  (define origin-forms (p (lex-this l file-port)))
-  (for/list ([f origin-forms])
-    f))
+(define number/p (syntax/p (token/p 'NUMBER)))
+(define string/p (syntax/p (token/p 'STRING)))
+(define identifier/p (syntax/p (token/p 'IDENTIFIER)))
+(define form/p
+  (syntax/p
+   (do (token/p '|(|)
+     [e* <- (many/p expr/p)]
+     (token/p '|)|)
+     (pure e*))))
+(define quote/p
+  (syntax/p
+   (do (token/p '|'|)
+     [e <- expr/p]
+     (pure (list 'quote e)))))
+(define expr/p
+  (or/p number/p
+        string/p
+        identifier/p
+        quote/p
+        form/p))
+
+(define (parse-expr input-port)
+  (parse-result!
+   (parse-tokens expr/p
+                 (lex-violet input-port))))
 
 (module+ test
   (require rackunit)
 
   (define (parse str)
-    (car (p (lex-this l (open-input-string str)))))
+    (syntax->datum
+     (parse-result! (parse-tokens expr/p
+                                  (lex-violet (open-input-string str))))))
 
-  (check-pred v:list?  (parse "(1 2 3)"))
-  (check-pred v:list? (parse "(1 (2 3 4) 5 6 7)"))
-  (check-pred v:quote? (parse "'(1 2 3)"))
-  (check-pred v:quote? (parse "'1"))
-  (check-pred v:num? (parse "1"))
-  (check-pred v:list? (parse "(println \"hello\")"))
-  (check-pred v:defvar? (parse "(define foo (+ 1 2 3))"))
-  )
+  (check-equal? (parse "(+ 1 2 3)")
+                '(+ 1 2 3))
+  (check-equal? (parse "(1 (2 3 4) 5 6 7)")
+                '(1 (2 3 4) 5 6 7))
+  (check-equal? (parse "'(1 2 3)")
+                ''(1 2 3))
+  (check-equal? (parse "'1")
+                ''1)
+  (check-equal? (parse "1")
+                1)
+  (check-equal? (parse "(println \"hello\")")
+                '(println "hello"))
+  (check-equal? (parse "(define foo (+ 1 2 3))")
+                '(define foo (+ 1 2 3))))

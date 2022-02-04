@@ -1,11 +1,10 @@
 #lang racket/base
-(provide (all-defined-out))
+(provide violet-lexer)
 
 (require parser-tools/lex
-         (prefix-in : parser-tools/lex-sre))
+         (prefix-in : parser-tools/lex-sre)
+         racket/string)
 
-(define-empty-tokens keyword
-  (:define))
 (define-empty-tokens symbol
   (|(|
    |)|
@@ -13,32 +12,26 @@
    |,|
    |,@|))
 (define-tokens datum
-  (ID
-   STR
-   NUM))
-(define-empty-tokens end (EOF))
+  (IDENTIFIER
+   STRING
+   NUMBER))
 
-(define l
+(define violet-lexer
   (lexer-src-pos
-   [(eof) (token-EOF)]
+   [(eof) eof]
+   [(:or whitespace blank iso-control) (void)]
    ["(" (token-|(|)]
    [")" (token-|)|)]
    ["'" (token-|'|)]
    ["," (token-|,|)]
    [",@" (token-|,@|)]
-   ["define" (token-:define)]
    [(:: (:or (char-set "+-.*/<=>!?:$%_&~^") alphabetic)
         (:* (:or (char-set "+-.*/<=>!?:$%_&~^")
                  numeric
                  alphabetic)))
-    (token-ID lexeme)]
-   [(:seq "\"" (:* (:~ #\")) "\"")
-    (token-STR lexeme)]
+    (token-IDENTIFIER (string->symbol lexeme))]
    [(:+ numeric)
-    (token-NUM lexeme)]
-   [whitespace (return-without-pos (l input-port))]))
-
-(define (token-type t)
-  (token-name (position-token-token t)))
-(define (token-value t)
-  (token-value (position-token-token t)))
+    (token-NUMBER (string->number lexeme))]
+   [(:seq "\"" (:* (:~ #\")) "\"")
+    (token-STRING (string-trim lexeme
+                               "\""))]))
