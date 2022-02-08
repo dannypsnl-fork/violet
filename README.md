@@ -1,9 +1,8 @@
 violet
 ======
-violet is a scheme compiler
+violet is a scheme package manager and a small compiler, unify different backend implementation?
 
 ### purpose
 
-1. produces smaller binary
-2. builtin package management
-3. better error message
+1. package management
+2. better error message
