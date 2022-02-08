@@ -14,6 +14,8 @@
    #:args args
    (cli args)))
 
+(define chezscheme (find-executable-path "scheme"))
+
 (define config-dir (build-path (find-system-path 'home-dir)
                                ".violet"))
 (define bin-dir (build-path config-dir "bin"))
@@ -28,9 +30,10 @@
 (define (cli args)
   (init-global)
   (match args
-    [(list "--help") (help)]
-    [(list "--version") (version)]
-    [(list "install" uri-string)
+    ['("--help") (help)]
+    ['("--version") (version)]
+    ['("repl") (system* chezscheme)]
+    [`("install" ,uri-string)
      (match-define (struct* url
                             ([scheme scheme]
                              [host host]
@@ -44,9 +47,9 @@
                 uri-string
                 installed-path))
      (void)]
-    [(list "run")
+    ['("run")
      (println (read (open-input-file "violet.ss")))
-     (system* (find-executable-path "scheme") "--script" "main.ss")
+     (system* chezscheme "--script" "main.ss")
      (void)]
     [_ (help)]))
 
