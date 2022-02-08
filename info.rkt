@@ -10,3 +10,5 @@
 (define version "0.0")
 (define pkg-authors '(dannypsnl))
 (define license '(BSD3))
+(define compile-omit-paths '("example"))
+(define test-omit-paths compile-omit-paths)

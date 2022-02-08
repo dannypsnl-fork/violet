@@ -1,8 +1,7 @@
 #lang racket/base
 (require racket/match
          racket/function
-         "parser.rkt"
-         "compiler.rkt")
+         racket/system)
 
 (module+ main
   (require racket/cmdline)
@@ -16,16 +15,13 @@
   (match args
     [(list "--help") (help)]
     [(list "--version") (version)]
-    [(list "parse" filename)
-     (parse-file (open-input-file filename))]
-    [(list filename)
-     (compile-file (parse-file (open-input-file filename)))]
+    [(list "run")
+     (system* (find-executable-path "scheme") "--script" "main.ss")]
     [_ (help)]))
 
 (define help
   (thunk (displayln "violet -- a command-line tool for Racket
-  parse <file> -- parse and show ast of file
-  <file> -- compile and run file
+  run -- run current main file
   --help
   --version")))
 (define version
