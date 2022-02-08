@@ -2,7 +2,9 @@
 (require racket/match
          racket/function
          racket/system
-         racket/file)
+         racket/file
+         racket/list
+         net/url)
 
 (module+ main
   (require racket/cmdline)
@@ -28,9 +30,24 @@
   (match args
     [(list "--help") (help)]
     [(list "--version") (version)]
+    [(list "install" uri-string)
+     (match-define (struct* url
+                            ([scheme scheme]
+                             [host host]
+                             [path path]))
+       (string->url uri-string))
+     (define paths (map path/param-path path))
+     (define installed-path (apply build-path (list* src-dir host paths)))
+     (when (equal? host "github.com")
+       (system* (find-executable-path "git")
+                "clone"
+                uri-string
+                installed-path))
+     (void)]
     [(list "run")
      (println (read (open-input-file "violet.ss")))
-     (system* (find-executable-path "scheme") "--script" "main.ss")]
+     (system* (find-executable-path "scheme") "--script" "main.ss")
+     (void)]
     [_ (help)]))
 
 (define help
